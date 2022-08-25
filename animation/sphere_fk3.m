@@ -21,9 +21,9 @@ function [T, pos, z1, z2, z3] = sphere_fk3(th1, th2, th3, l, Tprevious)
           a2 alpha2 d2 theta2;
           a3 alpha3 d3 theta3];
 
-    A1 = getHomogenousTransf(DH(1,:));
-    A2 = getHomogenousTransf(DH(2,:));
-    A3 = getHomogenousTransf(DH(3,:));
+    A1 = HomogenousTransf(DH(1,:));
+    A2 = HomogenousTransf(DH(2,:));
+    A3 = HomogenousTransf(DH(3,:));
     A1 = Tprevious*A1;
 
     z1 = A1(1:3,1:3)*[0;0;1];
@@ -33,11 +33,4 @@ function [T, pos, z1, z2, z3] = sphere_fk3(th1, th2, th3, l, Tprevious)
     T = A1*A2*A3;
     pos = T(1:3, 4);
 
-end
-
-function [A_Frame] = getHomogenousTransf(dh)
-    A_Frame = [cos(dh(4)) -sin(dh(4))*cos(dh(2)) sin(dh(4))*sin(dh(2)) dh(1)*cos(dh(4));
-    sin(dh(4)) cos(dh(4))*cos(dh(2)) -cos(dh(4))*sin(dh(2)) dh(1)*sin(dh(4));
-    0 sin(dh(2)) cos(dh(2)) dh(3);
-    0 0 0 1];
 end

@@ -1,0 +1,25 @@
+<?xml version="1.0" ?>
+<robot name="onelink">
+  <!-- Run the macros -->
+  <link name="base_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="-2.3E-05 -0.010364 -0.07336"/>
+      <mass value="1.3773"/>
+      <inertia ixx="0.00457" ixy="1E-06" ixz="2E-06" iyy="0.004831" iyz="0.000448" izz="0.001409"/>
+    </inertial>
+  </link>
+  <link name="half_arm_1_link">
+    <inertial>
+      <origin rpy="0 0 0" xyz="-4.4E-05 -0.09958 -0.013278"/>
+      <mass value="1.1636"/>
+      <inertia ixx="0.011088" ixy="5E-06" ixz="0" iyy="0.001072" iyz="-0.000691" izz="0.011255"/>
+    </inertial>
+  </link>
+  <joint name="joint" type="revolute">
+    <origin rpy="1.5708 2.1343E-17 -1.1102E-16" xyz="0 0.005375 -0.12838"/>
+    <parent link="base_link"/>
+    <child link="half_arm_1_link"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="39" lower="-2.41" upper="2.41" velocity="1.3963"/>
+  </joint>
+</robot>
