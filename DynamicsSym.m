@@ -44,8 +44,6 @@ classdef DynamicsSym
                 d(i, :) = T(1:3, 4)';
             end
 
-            D = subs(D, obj.g, 9.8);
-            C = subs(C, obj.g, 9.8);
             G = subs(G, obj.g, 9.8);
             D = subs(D, [obj.q_sym, obj.d_sym, obj.m_sym, obj.CoM_sym, obj.I_sym], [q, d, m, CoM, I]);
             C = subs(C, [obj.q_sym, obj.qd_sym, obj.d_sym, obj.m_sym, obj.CoM_sym, obj.I_sym], [q, qd, d, m, CoM, I]);

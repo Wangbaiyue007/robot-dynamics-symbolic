@@ -4,7 +4,6 @@ function [D, C, G] = EulerLagrange(robot)
 % are symbolic. Other parameters are treated as real numbers.
 arguments
     robot rigidBodyTree % robot object
-    %DH double % matrices of the DH parameters with 4 columns
 end
 
 %% Parameters
@@ -26,13 +25,13 @@ home = homeConfiguration(robot);
 Ti = cell(N, 1);
 R = getTransform(robot, home, robot.BodyNames{1}, robot.BaseName);
 R = round(R(1:3,1:3)); % round to nearest integer, either 0 or 1
-Ti{1} = k.rotZ(q(1)) * k.transf(R, d(1,:)');
+Ti{1} = k.transf(R, d(1,:)') * k.rotZ(q(1));
 T = Ti{1};
 for i = 2:N
     R = getTransform(robot, home, robot.BodyNames{i}, robot.BodyNames{i-1});
     R = round(R(1:3,1:3));
-    tf =  k.rotZ(q(i)) * k.transf(R, d(i,:)');
-    T = tf*T;
+    tf = k.transf(R, d(i,:)') * k.rotZ(q(i));
+    T = T * tf;
     Ti{i} = T;
 end
 Tci = cell(N, 1);
@@ -54,10 +53,9 @@ end
 % velocity Jacobian Jv (1 by n) cell, each cell is a (3 by n) symbolic matrix
 Jv = arrayfun(@(x) sym(zeros(3, N)), 1:N, 'UniformOutput', 0);
 for link = 2:N
-    o = Tci{link}(1:3, 4);
-    for i = 2:link
-        Jv{link}(:, i) = cross(Jw{7}(:, i), o - Tci{i-1}(1:3, 4));
-        %Jv{link}(:, joint) = diff(c, q(joint));
+    o = Ti{link}(1:3, 4);
+    for i = 1:link-1
+        Jv{link}(:, i) = cross(Jw{7}(:, i), o - Ti{i}(1:3, 4));
     end
 end
 
@@ -70,7 +68,7 @@ I = arrayfun(@(joint) DynamicsSym.InertiaTensor(I(joint, :)), 1:N, 'UniformOutpu
 D = 0; % inertia matrix
 P = 0; % potential energy
 for i = 1:N
-    R = Tci{i}(1:3,1:3);
+    R = Ti{i}(1:3,1:3);
     D = D + (m(i)*Jv{i}'*Jv{i} + Jw{i}'*R*I{i}*R'*Jw{i});
     P = P + m(i) * g * Tci{i}(3, 4);
 end
