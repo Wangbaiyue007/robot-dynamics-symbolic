@@ -16,8 +16,11 @@ qd = rand(7,1);
 tau = rand(7,1);
 tic
 dyn = DynamicsSym(robot);
-[qdd_sym, Dval, Cval, Gval] = dyn.ForwardDynamics(robot, D, C, G, q, qd, tau);
+[qdd_sym, ~, ~, ~] = dyn.ForwardDynamics(robot, D, C, G, q, qd, tau);
 toc
 qdd_real = forwardDynamics(robot, q, qd, tau);
-diff = qdd_sym - qdd_real;
-disp(diff);
+error = qdd_sym - qdd_real;
+disp('qdd_sym      qdd_real');
+disp([qdd_sym qdd_real]);
+disp("Normalized error:");
+disp(norm(error)/norm(qdd_real));

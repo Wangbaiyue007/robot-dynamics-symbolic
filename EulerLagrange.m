@@ -22,7 +22,7 @@ syms g;
 % transformation from center of mass 0 to i
 k = KinematicsSym;
 home = homeConfiguration(robot);
-Ti = cell(N, 1);
+Ti = arrayfun(@(x) sym(zeros(4, 4)), 1:N, 'UniformOutput', 0);
 R = getTransform(robot, home, robot.BodyNames{1}, robot.BaseName);
 R = round(R(1:3,1:3)); % round to nearest integer, either 0 or 1
 Ti{1} = k.transf(R, d(1,:)') * k.rotZ(q(1));
@@ -34,7 +34,7 @@ for i = 2:N
     T = T * tf;
     Ti{i} = T;
 end
-Tci = cell(N, 1);
+Tci = arrayfun(@(x) sym(zeros(4, 4)), 1:N, 'UniformOutput', 0);
 for i = 1:N
     Tci{i} = Ti{i} * k.transl(CoM(i,:)');
 end
@@ -53,9 +53,10 @@ end
 % velocity Jacobian Jv (1 by n) cell, each cell is a (3 by n) symbolic matrix
 Jv = arrayfun(@(x) sym(zeros(3, N)), 1:N, 'UniformOutput', 0);
 for link = 2:N
-    o = Ti{link}(1:3, 4);
+    on = Ti{link}(1:3, 4); % end effector position
     for i = 1:link-1
-        Jv{link}(:, i) = cross(Jw{7}(:, i), o - Ti{i}(1:3, 4));
+        oi_1 = Ti{i}(1:3, 4); % joint position
+        Jv{link}(:, i) = cross(Jw{7}(:, i), on - oi_1);
     end
 end
 
@@ -65,24 +66,21 @@ I = arrayfun(@(joint) DynamicsSym.InertiaTensor(I(joint, :)), 1:N, 'UniformOutpu
 
 %% Equations of motion
 % D (N by N) symbolic matrix, C (N by N) symbolic matrix
-D = 0; % inertia matrix
+D = sym(zeros(N, N)); % inertia matrix
 P = 0; % potential energy
 for i = 1:N
     R = Ti{i}(1:3,1:3);
     D = D + (m(i)*Jv{i}'*Jv{i} + Jw{i}'*R*I{i}*R'*Jw{i});
-    P = P + m(i) * g * Tci{i}(3, 4);
+    P = P + m(i) * g * Ti{i}(3, 4);
 end
-
-% The Christoffel symbols
-c = zeros(N, N, N,'sym');
 
 % The Coriolis matrix
 C = zeros(N, N, 'sym');
 for k = 1:N
     for j = 1:N
         for i = 1:N
-            c(i,j,k) = 1/2 * (diff(D(k,j),q(i)) + diff(D(k,i),q(j)) - diff(D(i,j),q(k)));
-            C(j,k) = C(j,k) + c(i,j,k)*qd(i);
+            c = 1/2 * (diff(D(k,j),q(i)) + diff(D(k,i),q(j)) - diff(D(i,j),q(k)));
+            C(k, j) = C(k, j) + c*qd(i);
         end
     end
 end
