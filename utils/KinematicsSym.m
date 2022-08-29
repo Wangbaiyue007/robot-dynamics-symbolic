@@ -28,7 +28,7 @@ classdef KinematicsSym
                  0 0 0  1];
         end
         function T = transf(R, d)
-            %Translation for d in 3D
+            %Transformation for R, d in 3D
             T = [  R    d;
                  0 0 0  1];
         end

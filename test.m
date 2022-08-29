@@ -11,16 +11,16 @@ tic
 toc
 
 %% forward dynamics
-q = rand(7,1);
-qd = rand(7,1);
-tau = rand(7,1);
+q = randomConfiguration(robot);
+qd = 0.5 - rand(7,1);
+tau = 0.5 - rand(7,1);
 tic
 dyn = DynamicsSym(robot);
 [qdd_sym, ~, ~, ~] = dyn.ForwardDynamics(robot, D, C, G, q, qd, tau);
 toc
 qdd_real = forwardDynamics(robot, q, qd, tau);
 error = qdd_sym - qdd_real;
-disp('qdd_sym      qdd_real');
+disp('   qdd_sym   qdd_real');
 disp([qdd_sym qdd_real]);
 disp("Normalized error:");
 disp(norm(error)/norm(qdd_real));

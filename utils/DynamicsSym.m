@@ -25,18 +25,14 @@ classdef DynamicsSym
         end
         function [qdd, Dval, Cval, Gval] = ForwardDynamics(obj, robot, D, C, G, q, qd, tau)
             %Calculate forward dynamics from symbolic input
-            % input: D, C, G symbolic matrices, fs joint parameters, q, qd joint states
+            %   input: D, C, G symbolic matrices, fs joint parameters, q, qd joint states
 
             [d, m, CoM, I] = loadData(robot);
             
             G = subs(G, obj.g, 9.8);
-            D = subs(D, [obj.q_sym, obj.d_sym, obj.m_sym, obj.CoM_sym, obj.I_sym], [q, d, m, CoM, I]);
-            C = subs(C, [obj.q_sym, obj.qd_sym, obj.d_sym, obj.m_sym, obj.CoM_sym, obj.I_sym], [q, qd, d, m, CoM, I]);
-            G = subs(G, [obj.q_sym, obj.d_sym, obj.m_sym, obj.CoM_sym, obj.I_sym], [q, d, m, CoM, I]);
-            
-            Dval = double(D);
-            Cval = double(C);
-            Gval = double(G);
+            Dval = double(subs(D, [obj.q_sym, obj.d_sym, obj.m_sym, obj.CoM_sym, obj.I_sym], [q, d, m, CoM, I]));
+            Cval = double(subs(C, [obj.q_sym, obj.qd_sym, obj.d_sym, obj.m_sym, obj.CoM_sym, obj.I_sym], [q, qd, d, m, CoM, I]));
+            Gval = double(subs(G, [obj.q_sym, obj.d_sym, obj.m_sym, obj.CoM_sym, obj.I_sym], [q, d, m, CoM, I]));
             
             qdd = (Dval) \ (- Cval * qd - Gval + tau);
         end
@@ -46,6 +42,7 @@ classdef DynamicsSym
         function I = InertiaTensor(inertia_vec)
             %Generate inertia tensor from input vector
             %   input: [Ixx, Iyy, Izz, Iyz, Ixz, Ixy]
+
             Ixx = inertia_vec(1);
             Iyy = inertia_vec(2);
             Izz = inertia_vec(3);

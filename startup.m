@@ -1,1 +1,1 @@
-addpath models
+addpath models/ utils/

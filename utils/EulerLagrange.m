@@ -1,7 +1,6 @@
 function [D, C, G] = EulerLagrange(robot)
 %% Generate symbolic dynamics equation
-% using Euler-Lagrange formulation. In this function only the joint states
-% are symbolic. Other parameters are treated as real numbers.
+% using Euler-Lagrange formulation. All calculations are symbolic.
 arguments
     robot rigidBodyTree % robot object
 end
@@ -52,30 +51,31 @@ end
 
 % velocity Jacobian Jv (1 by n) cell, each cell is a (3 by n) symbolic matrix
 Jv = arrayfun(@(x) sym(zeros(3, N)), 1:N, 'UniformOutput', 0);
-for link = 2:N
-    on = Ti{link}(1:3, 4); % end effector position
-    for i = 1:link-1
+for link = 1:N
+    on = Tci{link}(1:3, 4); % end effector position
+    for i = 1:link
         oi_1 = Ti{i}(1:3, 4); % joint position
         Jv{link}(:, i) = cross(Jw{7}(:, i), on - oi_1);
     end
 end
 
 %% Inertia tensor
-% I (1 by N) cell array, each cell is a (3 by 3) double matrix
-I = arrayfun(@(joint) DynamicsSym.InertiaTensor(I(joint, :)), 1:N, 'UniformOutput', 0);
+% I_tensor (1 by N) cell array, each cell is a (3 by 3) double matrix
+I_tensor = arrayfun(@(joint) DynamicsSym.InertiaTensor(I(joint, :)), ...
+            1:N, 'UniformOutput', 0);
 
 %% Equations of motion
 % D (N by N) symbolic matrix, C (N by N) symbolic matrix
 D = sym(zeros(N, N)); % inertia matrix
-P = 0; % potential energy
+P = sym(0); % potential energy
 for i = 1:N
     R = Ti{i}(1:3,1:3);
-    D = D + (m(i)*Jv{i}'*Jv{i} + Jw{i}'*R*I{i}*R'*Jw{i});
-    P = P + m(i) * g * Ti{i}(3, 4);
+    D = D + (m(i)*Jv{i}'*Jv{i} + Jw{i}'*R*I_tensor{i}*R'*Jw{i});
+    P = P + m(i) * g * Tci{i}(3, 4);
 end
 
 % The Coriolis matrix
-C = zeros(N, N, 'sym');
+C = sym(zeros(N, N));
 for k = 1:N
     for j = 1:N
         for i = 1:N
@@ -86,7 +86,7 @@ for k = 1:N
 end
 
 % The gravitation terms
-G = zeros(N,1,'sym');
+G = sym(zeros(N,1));
 for i = 1:N
     G(i) = diff(P,q(i));
 end
