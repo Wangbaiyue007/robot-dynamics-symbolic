@@ -1,5 +1,6 @@
 # Symbolic Dynamics
-Can machines beat humans in the symbolic space?
+Can machines beat humans in the symbolic space?  
+Some documentation is on the [Notion](https://www.notion.so/Symbolic-Dynamics-48e1fd577cab490193e373d776ac2949) page.
 ## Instruction
 Run `startup.m` to set path. Run `test.m` to see the comparison between the symbolic dynamics and the ground truth.
 ## Results
