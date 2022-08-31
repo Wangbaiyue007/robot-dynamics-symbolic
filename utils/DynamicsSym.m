@@ -9,6 +9,7 @@ classdef DynamicsSym
         CoM_sym % center of mass offset
         I_sym % inertia vector
         g % gravity
+        tau % torque input
     end
     
     methods
@@ -22,6 +23,7 @@ classdef DynamicsSym
             obj.CoM_sym = sym('c', [N 3], 'real');
             obj.I_sym = sym('I', [N 6], 'real');
             obj.g = sym('g', 'real');
+            obj.tau = sym('tau', [N 1], 'real');
         end
         function [qdd, Dval, Cval, Gval] = ForwardDynamics(obj, robot, D, C, G, q, qd, tau)
             %Calculate forward dynamics from symbolic input
@@ -35,6 +37,10 @@ classdef DynamicsSym
             Gval = double(subs(G, [obj.q_sym, obj.d_sym, obj.m_sym, obj.CoM_sym, obj.I_sym], [q, d, m, CoM, I]));
             
             qdd = (Dval) \ (- Cval * qd - Gval + tau);
+        end
+        function SaveFunction(obj, D, C, G)
+            Function = D \ (-C * obj.qd_sym - G + obj.tau);
+            matlabFunction(Function, 'File', 'ForwardDynamicsSym');
         end
     end
    

@@ -31,11 +31,11 @@ for i = 2:N
     R = round(R(1:3,1:3));
     tf = k.transf(R, d(i,:)') * k.rotZ(q(i));
     T = T * tf;
-    Ti{i} = T;
+    Ti{i} = simplify(T);
 end
 Tci = arrayfun(@(x) sym(zeros(4, 4)), 1:N, 'UniformOutput', 0);
 for i = 1:N
-    Tci{i} = Ti{i} * k.transl(CoM(i,:)');
+    Tci{i} = simplify(Ti{i} * k.transl(CoM(i,:)'));
 end
 
 %% Jacobians
@@ -55,7 +55,7 @@ for link = 1:N
     on = Tci{link}(1:3, 4); % end effector position
     for i = 1:link
         oi_1 = Ti{i}(1:3, 4); % joint position
-        Jv{link}(:, i) = cross(Jw{7}(:, i), on - oi_1);
+        Jv{link}(:, i) = simplify(cross(Jw{7}(:, i), on - oi_1));
     end
 end
 

@@ -10,12 +10,18 @@ tic
 [D, C, G] = EulerLagrange(robot);
 toc
 
+%% save as matlab function
+dyn = DynamicsSym(robot);
+disp("saving function...");
+tic
+dyn.SaveFunction(D, C, G);
+toc
+
 %% forward dynamics
 q = randomConfiguration(robot);
 qd = 0.5 - rand(7,1);
 tau = 0.5 - rand(7,1);
 tic
-dyn = DynamicsSym(robot);
 [qdd_sym, ~, ~, ~] = dyn.ForwardDynamics(robot, D, C, G, q, qd, tau);
 toc
 qdd_real = forwardDynamics(robot, q, qd, tau);
