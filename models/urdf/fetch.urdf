@@ -651,7 +651,7 @@
     <child link="head_camera_depth_optical_frame" />
  </joint>
 
-  <gazebo reference="head_camera_rgb_optical_frame">
+  <!-- <gazebo reference="head_camera_rgb_optical_frame">
     <sensor:camera name="rgb">
       <imageFormat>R8G8B8</imageFormat>
       <imageSize>192 128</imageSize>
@@ -660,6 +660,6 @@
       <farClip>100</farClip>
       <updateRate>60.0</updateRate>
     </sensor:camera>
-  </gazebo>
+  </gazebo> -->
 
 </robot>

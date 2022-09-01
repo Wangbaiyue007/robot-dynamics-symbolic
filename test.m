@@ -1,7 +1,7 @@
 clear; clc; close all;
 
 %% load robot parameters and urdf
-robot = importrobot('models/urdf/gen3.urdf');
+robot = importrobot('models/urdf/2link.urdf');
 robot.Gravity = [0 0 -9.8];
 robot.DataFormat = 'column';
 
@@ -14,13 +14,13 @@ toc
 dyn = DynamicsSym(robot);
 disp("saving function...");
 tic
-dyn.SaveFunction(D, C, G);
+dyn.SaveFunction(D, C, G, 'matlabfunctions/two_link');
 toc
 
 %% forward dynamics
 q = randomConfiguration(robot);
-qd = 0.5 - rand(7,1);
-tau = 0.5 - rand(7,1);
+qd = 0.5 - rand(robot.NumBodies,1);
+tau = 0.5 - rand(robot.NumBodies,1);
 tic
 [qdd_sym, ~, ~, ~] = dyn.ForwardDynamics(robot, D, C, G, q, qd, tau);
 toc

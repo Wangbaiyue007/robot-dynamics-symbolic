@@ -38,9 +38,9 @@ classdef DynamicsSym
             
             qdd = (Dval) \ (- Cval * qd - Gval + tau);
         end
-        function SaveFunction(obj, D, C, G)
+        function SaveFunction(obj, D, C, G, name)
             Function = D \ (-C * obj.qd_sym - G + obj.tau);
-            matlabFunction(Function, 'File', 'ForwardDynamicsSym');
+            matlabFunction(Function, 'File', name);
         end
     end
    

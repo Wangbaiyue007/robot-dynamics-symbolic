@@ -13,6 +13,7 @@ CoM = sym('c', [N 3], 'real'); % center of mass offset
 I = sym('I', [N 6], 'real'); % inertia vector
 q = sym('q', [N 1], 'real'); % generalized coordinates (joint angles)
 qd = sym('qd', [N 1], 'real'); % q's derivative w.r.t time
+% R = arrayfun(@(x) sym('R', [3 3], 'real'), 1:N, 'UniformOutput', 0); % rotation matrix
 syms g;
 
 %% Transformations
@@ -23,7 +24,7 @@ k = KinematicsSym;
 home = homeConfiguration(robot);
 Ti = arrayfun(@(x) sym(zeros(4, 4)), 1:N, 'UniformOutput', 0);
 R = getTransform(robot, home, robot.BodyNames{1}, robot.BaseName);
-R = round(R(1:3,1:3)); % round to nearest integer, either 0 or 1
+R = round(R(1:3,1:3)); % round to nearest integer, either 0 or +-1
 Ti{1} = k.transf(R, d(1,:)') * k.rotZ(q(1));
 T = Ti{1};
 for i = 2:N
@@ -31,11 +32,11 @@ for i = 2:N
     R = round(R(1:3,1:3));
     tf = k.transf(R, d(i,:)') * k.rotZ(q(i));
     T = T * tf;
-    Ti{i} = simplify(T);
+    Ti{i} = T;
 end
 Tci = arrayfun(@(x) sym(zeros(4, 4)), 1:N, 'UniformOutput', 0);
 for i = 1:N
-    Tci{i} = simplify(Ti{i} * k.transl(CoM(i,:)'));
+    Tci{i} = Ti{i} * k.transl(CoM(i,:)');
 end
 
 %% Jacobians
@@ -44,8 +45,8 @@ end
 Jw = arrayfun(@(x) sym(zeros(3, N)), 1:N, 'UniformOutput', 0);
 for link = 1:N
     for i = 1:link
-        R = Ti{i}(1:3,1:3);
-        Jw{link}(:, i) = sym(R*[0;0;1]);
+        R_i = Ti{i}(1:3,1:3);
+        Jw{link}(:, i) = sym(R_i*[0;0;1]);
     end
 end
 
@@ -55,12 +56,12 @@ for link = 1:N
     on = Tci{link}(1:3, 4); % end effector position
     for i = 1:link
         oi_1 = Ti{i}(1:3, 4); % joint position
-        Jv{link}(:, i) = simplify(cross(Jw{7}(:, i), on - oi_1));
+        Jv{link}(:, i) = cross(Jw{N}(:, i), on - oi_1);
     end
 end
 
 %% Inertia tensor
-% I_tensor (1 by N) cell array, each cell is a (3 by 3) double matrix
+% I_tensor (1 by N) cell array, each cell is a (3 by 3) symbolic matrix
 I_tensor = arrayfun(@(joint) DynamicsSym.InertiaTensor(I(joint, :)), ...
             1:N, 'UniformOutput', 0);
 
