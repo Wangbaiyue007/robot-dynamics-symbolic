@@ -8,8 +8,10 @@ classdef DynamicsSym
         m_sym % mass
         CoM_sym % center of mass offset
         I_sym % inertia vector
+        fs_sym % joint parameters
         g % gravity
         tau % torque input
+        DataFormat % row or column
     end
     
     methods
@@ -22,8 +24,10 @@ classdef DynamicsSym
             obj.m_sym = sym('m', [N 1], 'real');
             obj.CoM_sym = sym('c', [N 3], 'real');
             obj.I_sym = sym('I', [N 6], 'real');
+            obj.fs_sym = sym('fs', [N 3], 'real');
             obj.g = sym('g', 'real');
             obj.tau = sym('tau', [N 1], 'real');
+            obj.DataFormat = convertCharsToStrings(robot.DataFormat);
         end
         function [qdd, Dval, Cval, Gval] = ForwardDynamics(obj, robot, D, C, G, q, qd, tau)
             %Calculate forward dynamics from symbolic input
@@ -38,8 +42,28 @@ classdef DynamicsSym
             
             qdd = (Dval) \ (- Cval * qd - Gval + tau);
         end
-        function SaveFunction(obj, D, C, G, name)
-            Function = D \ (-C * obj.qd_sym - G + obj.tau);
+        function SaveFunction(obj, D, C, G, name, usefda)
+            if usefda
+                %dir = -1 + 2./(1 + exp(-100*obj.qd_sym));
+                dir = sign(obj.qd_sym);
+                if obj.DataFormat == "column"
+                    Function = (D + obj.fs_sym(:, 3).*eye(obj.N)) \ ...
+                                (-C * obj.qd_sym - G + obj.tau  ...
+                                 -obj.fs_sym(:,1) .* dir - obj.fs_sym(:,2) .* obj.qd_sym);
+                elseif obj.DataFormat == "row"
+                    Function = (-obj.qd_sym' * C' - G' + obj.tau' ...
+                                -obj.fs_sym(:,1)' .* dir' - obj.fs_sym(:,2)' .* obj.qd_sym') ...
+                                / (D' + obj.fs_sym(:, 3).*eye(obj.N));
+                end
+                disp("using joint parameters option")
+            else
+                if obj.DataFormat == "column"
+                    Function = D \ (-C * obj.qd_sym - G + obj.tau);
+                elseif obj.DataFormat == "row"
+                    Function = (-obj.qd_sym' * C' - G' + obj.tau') / D';
+                end
+            end
+            disp(append("robot data format: ", obj.DataFormat));
             matlabFunction(Function, 'File', name);
         end
     end
