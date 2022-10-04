@@ -1,1 +1,1 @@
-addpath models/ utils/
+addpath models/ utils/ casadi/
