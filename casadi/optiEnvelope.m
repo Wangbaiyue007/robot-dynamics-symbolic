@@ -31,7 +31,7 @@ g = P(end, 1);
 T = 0.5; % final time
 
 % ---- objective ----
-opti.minimize(sum(sum(q))); % minimal end state
+opti.minimize(sum(sum(qd))); % minimal end state
 
 % ---- dynamic constraints ----
 f = CasadiForwardDynamics(robot);
@@ -39,9 +39,8 @@ f = CasadiForwardDynamics(robot);
 dt = T/N; % length of a control interval
 for k=1:N % loop over control intervals
 %     opti.subject_to(U(:, k) == zeros(NumBodies, 1)); % specify torque input
-%     Uk = cos(dt*k).*ones(NumBodies,1);
-    Uk = zeros(NumBodies, 1);
-    disp(Uk);
+    Uk = cos(dt*k).*ones(NumBodies,1);
+%     Uk = zeros(NumBodies, 1);
     % Runge-Kutta 4 integration
     k1 = f('x', X(:,k),              'u', Uk, 'p', P);
     k2 = f('x', X(:,k)+dt/2*k1.xdot, 'u', Uk, 'p', P);
@@ -84,10 +83,10 @@ sol = opti.solve();
 %% ---- plot ----
 params_opt = sol.value(P);
 % ode result of optimal parameters
-[t, y] = ode45(@(t,y) full(f(y, cos(t)*ones(NumBodies, 1), params_opt)), ...
+[t, y] = ode45(@(t,y) full(f(y, cos(t)*zeros(NumBodies, 1), params_opt)), ...
     [0 T], state_init);
 % ode result of original parameters
-[t1, y1] = ode45(@(t1,y1) full(f(y1, cos(t1)*ones(NumBodies, 1), [params; 9.8])), ...
+[t1, y1] = ode45(@(t1,y1) full(f(y1, cos(t1)*zeros(NumBodies, 1), [params; 9.8])), ...
     [0 T], state_init);
 for i = 1:NumBodies
     n = NumBodies;
