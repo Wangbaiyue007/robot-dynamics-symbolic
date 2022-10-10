@@ -102,13 +102,14 @@ end
 tau = SX.sym('tau', N, 1);
 % Define state and input
 X = [q; qd];
-U = [tau; reshape(d,3*N,1); m; reshape(CoM,3*N,1); reshape(I,6*N,1); g];
+U = tau;
+P = [reshape(d,3*N,1); m; reshape(CoM,3*N,1); reshape(I,6*N,1); g];
 
 qdd = D\(- C * qd - G + tau);
 % Xdot = [qd; qdd; zeros(N*13+1,1)];
 Xdot = [qd; qdd];
-f = Function('f', {X, U}, {Xdot}, ...
-            {'x', 'u'}, {'xdot'});
+f = Function('f', {X, U, P}, {Xdot}, ...
+            {'x', 'u', 'p'}, {'xdot'});
 
 
 end
