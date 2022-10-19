@@ -1,10 +1,11 @@
 %% Added EulerLagrange Function rewritten to work with Casadi
 
-function f = CasadiForwardDynamics(robot)
+function f = CasadiForwardDynamics(robot, useJointConstants)
 %% Generate Casadi symbolic dynamics equation
 % using Euler-Lagrange formulation. All calculations are symbolic.
 arguments
     robot rigidBodyTree % robot object
+    useJointConstants logical = 0 % whether or not to use the friction,damping and armature
 end
 
 import casadi.*
@@ -103,9 +104,17 @@ tau = SX.sym('tau', N, 1);
 % Define state and input
 X = [q; qd];
 U = tau;
-P = [reshape(d,3*N,1); m; reshape(CoM,3*N,1); reshape(I,6*N,1); g];
 
-qdd = D\(- C * qd - G + tau);
+if useJointConstants ~= 1
+    P = [reshape(d,3*N,1); m; reshape(CoM,3*N,1); reshape(I,6*N,1); g];
+    qdd = D\(- C * qd - G + tau);
+else
+    friction = SX.sym('Kf', N, 1);
+    damping = SX.sym('Kd', N, 1);
+    armature = SX.sym('Ka', N, 1);
+    P = [reshape(d,3*N,1); m; reshape(CoM,3*N,1); reshape(I,6*N,1); friction; damping; armature; g];
+    qdd = (D - eye(N).*armature)\((-C+damping) * qd - G + friction + tau);
+end
 % Xdot = [qd; qdd; zeros(N*13+1,1)];
 Xdot = [qd; qdd];
 f = Function('f', {X, U, P}, {Xdot}, ...
