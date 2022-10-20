@@ -8,7 +8,7 @@ N = 100; % number of control intervals
 opti = casadi.Opti(); % Optimization problem
 
 % ---- load robot ----
-robot = importrobot('models/urdf/4link.urdf');
+robot = importrobot('models/urdf/6link.urdf');
 robot.Gravity = [0 0 -9.8];
 robot.DataFormat = 'column';
 NumBodies = robot.NumBodies;
@@ -18,9 +18,6 @@ NumBodies = robot.NumBodies;
 X = opti.variable(NumBodies*2, N+1); % state [q; qd]
 q = X(1:NumBodies, :);
 qd = X(NumBodies+1:NumBodies*2, :);
-
-% U = opti.variable(NumBodies, N); % control [tau]
-% tau = U(1:NumBodies*1, :);
 
 P = opti.variable(NumBodies*(3+1+3+6+3), 1); % static parameters
 d = P(1:NumBodies*3, 1);
