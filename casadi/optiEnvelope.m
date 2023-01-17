@@ -8,7 +8,7 @@ N = 100; % number of control intervals
 opti = casadi.Opti(); % Optimization problem
 
 % ---- load robot ----
-robot = importrobot('models/urdf/6link.urdf');
+robot = importrobot('models/urdf/3link.urdf');
 robot.Gravity = [0 0 -9.8];
 robot.DataFormat = 'column';
 NumBodies = robot.NumBodies;
@@ -32,7 +32,7 @@ T = 0.5; % final time
 dt = T/N; % length of a control interval
 
 % ---- objective ----
-opti.minimize(sum(qd(:, end)*dt)); % minimal end state
+opti.minimize(sum(qd(1, end)*dt)); % minimal end state
 
 % ---- dynamic constraints ----
 f = CasadiForwardDynamics(robot, 1);

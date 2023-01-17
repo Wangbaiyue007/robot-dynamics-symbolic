@@ -17,9 +17,15 @@ CoM = SX.sym('c', N, 3); % sym('c', [N 3], 'real'); % center of mass offset
 I = SX.sym('I', N, 6); % sym('I', [N 6], 'real'); % inertia vector
 q = SX.sym('q', N, 1); % sym('q', [N 1], 'real'); % generalized coordinates (joint angles)
 qd = SX.sym('qd', N, 1); % sym('qd', [N 1], 'real'); % q's derivative w.r.t time
-
-% R = arrayfun(@(x) sym('R', [3 3], 'real'), 1:N, 'UniformOutput', 0); % rotation matrix
 g = SX.sym('g');
+
+% properties of fixed joints
+for i = 1:N
+    if robot.Bodies{i}.Joint == "fixed"
+        q(i) = 0;
+        qd(i) = 0;
+    end
+end
 
 %% Transformations
 % Transformation matrix Ti is a (N by 1) cell, each cell is a (4 by 4)
@@ -27,11 +33,9 @@ g = SX.sym('g');
 % transformation from center of mass 0 to i
 k = KinematicsSym;
 home = homeConfiguration(robot);
-% Zac: not sure the array is needed here for casadi?
 Ti = arrayfun(@(x) SX.zeros(4,4), 1:N, 'UniformOutput',0); % arrayfun(@(x) sym(zeros(4, 4)), 1:N, 'UniformOutput', 0);
 R = getTransform(robot, home, robot.BodyNames{1}, robot.BaseName);
 R = round(R(1:3,1:3)); % round to nearest integer, either 0 or +-1
-% not sure if it is necessary to rewrite k.transf and k.rotz etc
 Ti{1} = k.transf(R, d(1,:)') * k.rotZ(q(1));
 T = Ti{1};
 for i = 2:N

@@ -12,15 +12,35 @@ import casadi.*
 
 %% Parameters (converted)
 N = robot.NumBodies;
-d = SX.sym('d', N, 3); % sym('d', [N 3], 'real'); % symbolic translation 
-m = SX.sym('m', N, 1); % sym('m', [N 1], 'real'); % mass
-CoM = SX.sym('c', N, 3); % sym('c', [N 3], 'real'); % center of mass offset
-I = SX.sym('I', N, 6); % sym('I', [N 6], 'real'); % inertia vector
-q = SX.sym('q', N, 1); % sym('q', [N 1], 'real'); % generalized coordinates (joint angles)
-qd = SX.sym('qd', N, 1); % sym('qd', [N 1], 'real'); % q's derivative w.r.t time
-
-% R = arrayfun(@(x) sym('R', [3 3], 'real'), 1:N, 'UniformOutput', 0); % rotation matrix
+d = SX.sym('d', N, 3); % symbolic translation 
+m = SX.sym('m', N, 1); % mass
+CoM = SX.sym('c', N, 3); % center of mass offset
+I = SX.sym('I', N, 6); % inertia vector
+q = SX.sym('q', N, 1); % generalized coordinates (joint angles)
+qd = SX.sym('qd', N, 1); % q's derivative w.r.t time
 g = SX.sym('g');
+tau = SX.sym('tau', N, 1); % joint torque
+
+%% Dealing with fixed joints
+% properties of fixed joints: positions and velocities remain zero
+N_fixed = 0;
+fixed_index = [];
+act_index = [];
+for i = 1:N
+    if robot.Bodies{i}.Joint.Type == "fixed"
+        q(i) = 0;
+        qd(i) = 0;
+        tau(i) = 0;
+        fixed_index = [fixed_index i];
+        N_fixed = N_fixed + 1;
+    else
+        act_index = [act_index i];
+    end
+end
+
+q_act = q(act_index); % actuated joints
+qd_act = qd(act_index); % actuated joints rate
+tau_act = tau(act_index); % actuated joint torques
 
 %% Transformations
 % Transformation matrix Ti is a (N by 1) cell, each cell is a (4 by 4)
@@ -60,9 +80,13 @@ end
 % velocity Jacobian Jv (1 by n) cell, each cell is a (3 by n) symbolic matrix
 Jv = arrayfun(@(x) SX.zeros(3,N), 1:N, 'UniformOutput', 0); % arrayfun(@(x) sym(zeros(3, N)), 1:N, 'UniformOutput', 0);
 for link = 1:N
+    j = 1; % actuated joint index
     on = Tci{link}(1:3, 4); % end effector position
     for i = 1:link
-        oi_1 = Ti{i}(1:3, 4); % joint position
+        if robot.Bodies{i}.Joint.Type ~= "fixed"
+            j = i;
+        end
+        oi_1 = Ti{j}(1:3, 4); % joint position
         Jv{link}(:, i) = cross(Jw{N}(:, i), on - oi_1);
     end
 end
@@ -85,9 +109,9 @@ end
 
 % The Coriolis matrix
 C = SX.zeros(N, N);
-for k = 1:N
-    for j = 1:N
-        for i = 1:N
+for k = act_index
+    for j = act_index
+        for i = act_index
             c = 1/2 * (jacobian(D(k,j),q(i)) + jacobian(D(k,i),q(j)) - jacobian(D(i,j),q(k)));
             C(k, j) = C(k, j) + c*qd(i);
         end
@@ -96,29 +120,28 @@ end
 
 % The gravitation terms
 G = SX.zeros(N,1);
-for i = 1:N
+for i = act_index
     G(i) = jacobian(P,q(i));
 end
 
-tau = SX.sym('tau', N, 1);
-% Define state and input
-X = [q; qd];
-U = tau;
-
+% joint constants (friction, damping, armature)
 if useJointConstants ~= 1
     P = [reshape(d,3*N,1); m; reshape(CoM,3*N,1); reshape(I,6*N,1); g];
-    qdd = D\(- C * qd - G + tau);
+    qdd_act = D(act_index, act_index)\(- C(act_index, act_index) * qd_act - G(act_index) + tau_act);
 else
     friction = SX.sym('Kf', N, 1);
     damping = SX.sym('Kd', N, 1);
     armature = SX.sym('Ka', N, 1);
     P = [reshape(d,3*N,1); m; reshape(CoM,3*N,1); reshape(I,6*N,1); friction; damping; armature; g];
-    qdd = (D - eye(N).*armature)\((-C+damping) * qd - G + friction + tau);
+    qdd_act = (D(act_index, act_index) - eye(N).*armature)\((-C(act_index, act_index)+damping) * qd - G(act_index) + friction + tau_act);
 end
-% Xdot = [qd; qdd; zeros(N*13+1,1)];
-Xdot = [qd; qdd];
-f = Function('f', {X, U, P}, {Xdot}, ...
-            {'x', 'u', 'p'}, {'xdot'});
+
+% Define input and output
+X = [q_act; qd_act];
+U = tau_act;
+Xdot = [qd_act; qdd_act];
+f = Function('f', { X,   U,   P},  { Xdot }, ...
+                  {'x', 'u', 'p'}, {'xdot'});
 
 
 end
