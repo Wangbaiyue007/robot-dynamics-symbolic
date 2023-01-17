@@ -4,17 +4,12 @@ clear; clc; close all;
 robot = importrobot('models/urdf/kinova_with_dumbbell.urdf');
 robot.Gravity = [0 0 -9.8];
 robot.DataFormat = 'column';
-N_act = 0;
-for i = 1:robot.NumBodies
-    if robot.Bodies{i}.Joint.Type ~= "fixed"
-        N_act = N_act + 1;
-    end
-end
-N_fixed = robot.NumBodies - N_act;
+Dyn = DynamicsSym(robot);
+N_act = Dyn.N - Dyn.N_fixed;
 
 %% generate dynamics equations
 tic
-f = CasadiForwardDynamics(robot);
+f = Dyn.RobotForwardDynamics;
 toc
 
 %% evauation
@@ -34,3 +29,5 @@ disp('   qdd_sym   qdd_real');
 disp([qdd_sym qdd_real]);
 disp("Normalized error:");
 disp(norm(error)/norm(qdd_real));
+
+%% calculate force of the last link

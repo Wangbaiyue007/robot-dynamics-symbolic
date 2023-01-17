@@ -12,10 +12,6 @@ classdef KinematicsSym
         act_index % array of actuated joints index
         q_act % actuated joint angles after removing fixed joints
         qd_act % q_act's derivative w.r.t. time
-        Ti
-        Tci
-        Jv
-        Jw
     end
     methods
         function obj = KinematicsSym(robot)
@@ -98,6 +94,36 @@ classdef KinematicsSym
                 end
             end
         end
+        function Ja = AnalyticJacobian(jv, jw)
+            % Calculates the analytical Jacobian (6 by 7). It is a function
+            % of q.
+            import casadi.*
+
+            alpha = SX.sym('alpha', 3, 1);
+            J = [jv; jw];
+            Ja = [SX.eye(3) SX.zeros(3,3); SX.zeros(3,3) obj.B(alpha)]*J;
+        end
+        function X_ddot = TaskspaceAcc(obj, Ja)
+            % Calculates accelerations in the task space. Returns a 6 by 1
+            % symbolic function containing translational and rotational accelerations
+            import casadi.*
+
+            qdd = SX.sym('qdd', obj.N-obj.N_fixed, 1);
+            Ja_dot = SX.sym('Ja_dot', obj.N-obj.N_fixed, obj.N-obj.N_fixed);
+            for i = 1:obj.N-obj.N_fixed % iterate all element
+                for j = 1:obj.N-obj.N_fixed
+                    for k = 1:obj.N-obj.N_fixed
+                        Ja_dot(i, j) = jacobian(Ja(i, j), obj.q_act(k))*obj.qd_act(k);
+                    end
+                end
+            end
+            x_ddot = Ja * qdd + Ja_dot * obj.qd_act;
+            States = [obj.q_act, obj.qd_act, qdd];
+            P = [reshape(obj.d,3*obj.N,1); obj.m; reshape(obj.CoM,3*obj.N,1)];
+            X_ddot = Function('X_ddot', {States,    P},   x_ddot, ...
+                                        {'states', 'p'}, 'x_ddot');
+        end
+        
     end
     methods (Static)
         function R = rotX(q)
@@ -159,8 +185,11 @@ classdef KinematicsSym
                  0          sin(alpha)             cos(alpha)            d;
                  0          0                      0                     1];
         end
-        function B = AnalyticalB(phi, theta, psi)
+        function B = B(alpha)
             %B matrix that transfer geometric Jacobian to Analytic Jacobian
+            phi = alpha(1);
+            theta = alpha(2);
+            psi = alpha(3);
             B = [cos(psi)*sin(theta) -sin(psi) 0;
                  sin(psi)*sin(theta)  cos(psi) 0;
                  cos(theta)           0        1];

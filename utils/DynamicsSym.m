@@ -95,7 +95,25 @@ classdef DynamicsSym < KinematicsSym
             f = Function('f', { X,   U,   P},  { Xdot }, ...
                               {'x', 'u', 'p'}, {'xdot'});
         end
-        
+        function f = RobotForwardDynamics(obj, useJointConstants)
+            % Generate Casadi symbolic dynamics equation
+            arguments
+                obj
+                useJointConstants logical = 0 % whether or not to use the friction,damping and armature
+            end
+            
+            % Transformations
+            [Ti, Tci] = obj.TransformationMatrices;
+            
+            % Jacobians
+            [Jv, Jw] = obj.Jacobians(Ti, Tci);
+            
+            % Equations of motion
+            D = obj.MassMatrix(Ti, Jv, Jw);
+            C = obj.CorioliMatrix(D);
+            G = obj.GravitationMatrix(Tci);
+            f = obj.ForwardDynamics(D, C, G, useJointConstants);
+        end
     end
    
     methods (Static)
