@@ -12,6 +12,7 @@ classdef KinematicsSym
         act_index % array of actuated joints index
         q_act % actuated joint angles after removing fixed joints
         qd_act % q_act's derivative w.r.t. time
+        alpha % Euler angles
     end
     methods
         function obj = KinematicsSym(robot)
@@ -24,6 +25,7 @@ classdef KinematicsSym
             obj.CoM = SX.sym('c', obj.N, 3);
             obj.q = SX.sym('q', obj.N, 1);
             obj.qd = SX.sym('qd', obj.N, 1);
+            obj.alpha = SX.sym('alpha', 3, 1);
 
             % properties of fixed joints: positions and velocities remain zero
             obj.N_fixed = 0;
@@ -67,6 +69,11 @@ classdef KinematicsSym
                 Tci{i} = Ti{i} * obj.transl(obj.CoM(i,:)');
             end
         end
+        function f = CreateFunction(obj, T)
+            % Create a function from the input Symbolic object
+            P = [reshape(obj.d,3*obj.N,1); obj.m; reshape(obj.CoM,3*obj.N,1)];
+            f = casadi.Function('f', {obj.q_act, P}, {T}, {'q', 'p'}, {'t'});
+        end
         function [Jv, Jw] = Jacobians(obj, Ti, Tci)
             % angular velocity Jacobian Jw (1 by N) cell, each cell is a (3 by N)
             % symbolic matrix
@@ -94,14 +101,13 @@ classdef KinematicsSym
                 end
             end
         end
-        function Ja = AnalyticJacobian(jv, jw)
-            % Calculates the analytical Jacobian (6 by 7). It is a function
+        function Ja = AnalyticJacobian(obj, jv, jw)
+            % Calculates the analytical Jacobian (6 by N). It is a function
             % of q.
             import casadi.*
-
-            alpha = SX.sym('alpha', 3, 1);
+            
             J = [jv; jw];
-            Ja = [SX.eye(3) SX.zeros(3,3); SX.zeros(3,3) obj.B(alpha)]*J;
+            Ja = [SX.eye(3) SX.zeros(3,3); SX.zeros(3,3) inv(obj.Bmatrix(obj.alpha))]*J;
         end
         function X_ddot = TaskspaceAcc(obj, Ja)
             % Calculates accelerations in the task space. Returns a 6 by 1
@@ -109,21 +115,20 @@ classdef KinematicsSym
             import casadi.*
 
             qdd = SX.sym('qdd', obj.N-obj.N_fixed, 1);
-            Ja_dot = SX.sym('Ja_dot', obj.N-obj.N_fixed, obj.N-obj.N_fixed);
-            for i = 1:obj.N-obj.N_fixed % iterate all element
+            Ja_dot = SX.sym('Ja_dot', 6, obj.N-obj.N_fixed);
+            for i = 1:6 % iterate all element
                 for j = 1:obj.N-obj.N_fixed
                     for k = 1:obj.N-obj.N_fixed
                         Ja_dot(i, j) = jacobian(Ja(i, j), obj.q_act(k))*obj.qd_act(k);
                     end
                 end
             end
-            x_ddot = Ja * qdd + Ja_dot * obj.qd_act;
-            States = [obj.q_act, obj.qd_act, qdd];
+            x_ddot = Ja(:,1:obj.N-obj.N_fixed) * qdd + Ja_dot * obj.qd_act;
+            States = [obj.q_act; obj.qd_act; qdd];
             P = [reshape(obj.d,3*obj.N,1); obj.m; reshape(obj.CoM,3*obj.N,1)];
-            X_ddot = Function('X_ddot', {States,    P},   x_ddot, ...
-                                        {'states', 'p'}, 'x_ddot');
+            X_ddot = Function('X_ddot', {States,   obj.alpha,    P},   {x_ddot}, ...
+                                        {'states', 'alpha',     'p'}, {'x_ddot'});
         end
-        
     end
     methods (Static)
         function R = rotX(q)
@@ -185,7 +190,7 @@ classdef KinematicsSym
                  0          sin(alpha)             cos(alpha)            d;
                  0          0                      0                     1];
         end
-        function B = B(alpha)
+        function B = Bmatrix(alpha)
             %B matrix that transfer geometric Jacobian to Analytic Jacobian
             phi = alpha(1);
             theta = alpha(2);

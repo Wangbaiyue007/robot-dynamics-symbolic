@@ -30,4 +30,16 @@ disp([qdd_sym qdd_real]);
 disp("Normalized error:");
 disp(norm(error)/norm(qdd_real));
 
-%% calculate force of the last link
+%% calculate acceleration of the last link
+[Ti, Tci] = Dyn.TransformationMatrices;
+[Jv, Jw] = Dyn.Jacobians(Ti, Tci);
+Ja = Dyn.AnalyticJacobian(Jv{7}, Jw{7}); % analytic Jacobian
+f_Tci = Dyn.CreateFunction(Tci{7});
+Tci_real = f_Tci('q', q, 'p', [reshape(d,[],1);m;reshape(CoM,[],1)]);
+alpha = rotm2eul(full(Tci_real.t(1:3,1:3)), 'ZYZ'); % convert rot matrix to euler angles
+tic
+f_x_ddot = Dyn.TaskspaceAcc(Ja);
+toc
+x_ddot = f_x_ddot('states', [q; qd; qdd_sym], 'alpha', alpha', ...
+    'p', [reshape(d,[],1);m;reshape(CoM,[],1)]);
+disp(x_ddot.x_ddot);
