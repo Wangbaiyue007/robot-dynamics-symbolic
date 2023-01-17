@@ -8,11 +8,12 @@ end
     m_data = zeros(N, 1);
     CoM_data = zeros(N, 3);
     I_data = zeros(N, 6);
+    D = DynamicsSym(robot);
     for i = 1:N
         m_data(i) = robot.Bodies{i}.Mass;
         CoM_data(i,:) = robot.Bodies{i}.CenterOfMass;
         % the inertia tensor need to be transformed back to relative to CoM
-        I_data(i,:) = parallelAxis(robot.Bodies{i}.Inertia, -m_data(i), -CoM_data(i, :));
+        I_data(i,:) = D.parallelAxis(robot.Bodies{i}.Inertia, -m_data(i), -CoM_data(i, :));
     end
     T = robot.getTransform(homeConfiguration(robot), ...
             robot.BodyNames{1}, robot.BaseName);

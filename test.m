@@ -12,11 +12,11 @@ toc
 
 %% save as matlab function
 robot.DataFormat = 'row';
-dyn = DynamicsSym(robot);
-disp("saving function...");
-tic
-dyn.SaveFunction(D, C, G, 'matlabfunctions/two_link', 1);
-toc
+dyn = DynamicsSymMatlab(robot);
+% disp("saving function...");
+% tic
+% dyn.SaveFunction(D, C, G, 'matlabfunctions/two_link', 1);
+% toc
 
 %% forward dynamics
 q = randomConfiguration(robot);
