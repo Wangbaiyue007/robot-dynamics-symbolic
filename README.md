@@ -1,15 +1,16 @@
 # Symbolic Dynamics
 Can machines beat humans in the symbolic space?  
 Some documentation is on the [Notion](https://www.notion.so/Symbolic-Dynamics-48e1fd577cab490193e373d776ac2949) page.
-## Note
+## Important Notes
+- **The Casadi version of the forward dynamics function is about 10000 times faster than the original matlab version!**
 - **Currently only support urdf that satisfy the following condition:**
-1. There are only revolute joints.
-2. The transformations between joints in the **home configuration** are orthognal (the rotations are multiple of $\pi/2$).
-- The animation is currenly irrelavent and not done yet.
+- There are only *revolute joints* or *fixed joints*.
+- The transformations between joints in the *home configuration* are orthognal (the rotations are multiple of $\pi/2$). This simplifies the symbolic calculation.
+- The animation part is currenly irrelavent.
 - Running this code requires the [symbolic toolbox](https://www.mathworks.com/products/symbolic.html) and the [robotics toolbox](https://www.mathworks.com/products/robotics.html).
 - [`DynamicsSym.SaveFunction()`](https://github.com/roahmlab/dynamics-symbolic/blob/main/test.m#L17) may take tremendous amout of time. Avoid using it if you can.
 ## Instruction
-Run `startup.m` to set path. Run `test.m` to see the comparison between the symbolic dynamics and the ground truth.
+Run `startup.m` to set path. Run `test_casadi.m` to see the comparison between the symbolic dynamics and the ground truth.
 ## Results
 The comparison between the calculation of the symbolic function (using substitution) and the matlab toolbox is shown here.  
 1. Mass matrix
