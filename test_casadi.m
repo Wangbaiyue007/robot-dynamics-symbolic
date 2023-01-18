@@ -8,6 +8,7 @@ Dyn = DynamicsSym(robot);
 N_act = Dyn.N - Dyn.N_fixed;
 
 %% generate dynamics equations
+disp("Generating forward dynamics function...")
 tic
 f = Dyn.RobotForwardDynamics;
 toc
@@ -18,6 +19,7 @@ qd = 0.5 - rand(N_act,1);
 tau = 0.5 - rand(N_act,1);
 [d, m, CoM, I] = loadData(robot);
 g = 9.8;
+disp("Evaluating forward dynamics...")
 tic
 x_dot = f('x', [q;qd], 'u', tau, ...
     'p', [reshape(d,[],1);m;reshape(CoM,[],1);reshape(I,[],1);g]);
@@ -33,13 +35,15 @@ disp(norm(error)/norm(qdd_real));
 %% calculate acceleration of the last link
 [Ti, Tci] = Dyn.TransformationMatrices;
 [Jv, Jw] = Dyn.Jacobians(Ti, Tci);
-Ja = Dyn.AnalyticJacobian(Jv{7}, Jw{7}); % analytic Jacobian
-f_Tci = Dyn.CreateFunction(Tci{7});
-Tci_real = f_Tci('q', q, 'p', [reshape(d,[],1);m;reshape(CoM,[],1)]);
-alpha = rotm2eul(full(Tci_real.t(1:3,1:3)), 'ZYZ'); % convert rot matrix to euler angles
+alpha = Dyn.rotm2eul(Tci{7}, 'ZYZ'); % convert rot matrix to euler angles
+Ja = Dyn.AnalyticJacobian(Jv{7}, Jw{7}, alpha); % analytic Jacobian
+disp("Generating task space acceleration function...")
 tic
 f_x_ddot = Dyn.TaskspaceAcc(Ja);
 toc
-x_ddot = f_x_ddot('states', [q; qd; qdd_sym], 'alpha', alpha', ...
+disp("Evaluating task space acceleration...")
+tic
+x_ddot = f_x_ddot('states', [q; qd; qdd_sym], ...
     'p', [reshape(d,[],1);m;reshape(CoM,[],1)]);
+toc
 disp(x_ddot.x_ddot);

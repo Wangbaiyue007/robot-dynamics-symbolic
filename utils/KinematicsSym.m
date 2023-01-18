@@ -101,13 +101,13 @@ classdef KinematicsSym
                 end
             end
         end
-        function Ja = AnalyticJacobian(obj, jv, jw)
+        function Ja = AnalyticJacobian(obj, jv, jw, alpha)
             % Calculates the analytical Jacobian (6 by N). It is a function
             % of q.
             import casadi.*
             
             J = [jv; jw];
-            Ja = [SX.eye(3) SX.zeros(3,3); SX.zeros(3,3) inv(obj.Bmatrix(obj.alpha))]*J;
+            Ja = [SX.eye(3) SX.zeros(3,3); SX.zeros(3,3) inv(obj.Bmatrix(alpha))]*J;
         end
         function X_ddot = TaskspaceAcc(obj, Ja)
             % Calculates accelerations in the task space. Returns a 6 by 1
@@ -126,8 +126,33 @@ classdef KinematicsSym
             x_ddot = Ja(:,1:obj.N-obj.N_fixed) * qdd + Ja_dot * obj.qd_act;
             States = [obj.q_act; obj.qd_act; qdd];
             P = [reshape(obj.d,3*obj.N,1); obj.m; reshape(obj.CoM,3*obj.N,1)];
-            X_ddot = Function('X_ddot', {States,   obj.alpha,    P},   {x_ddot}, ...
-                                        {'states', 'alpha',     'p'}, {'x_ddot'});
+            X_ddot = Function('X_ddot', {States,    P},   {x_ddot}, ...
+                                        {'states', 'p'}, {'x_ddot'});
+        end
+        function eul = rotm2eul(obj, R, varargin)
+            % Symbolic adaptation of rotm2eul function from robotics
+            % toolbox
+            import casadi.*
+            seq = robotics.internal.validation.validateEulerSequence(varargin{:});
+            % Pre-allocate output
+            eulShaped = SX.zeros(1, 3); % , size(R,3), 'like', R);
+            % The parsed sequence will be in all upper-case letters and validated
+            switch seq
+                case 'ZYX'
+                    % Handle Z-Y-X rotation order        
+                    eulShaped = obj.calculateEulerAngles(R, 'ZYX');
+            
+                case 'ZYZ'
+                    % Handle Z-Y-Z rotation order
+                    eulShaped = obj.calculateEulerAngles(R, 'ZYZ');
+                    
+                case 'XYZ'
+                    % Handle X-Y-Z rotation order
+                    eulShaped = obj.calculateEulerAngles(R, 'XYZ');
+            end
+            % Shape output as a series of row vectors
+            eul = reshape(eulShaped,[3, numel(eulShaped)/3]).';
+        
         end
     end
     methods (Static)
@@ -198,6 +223,50 @@ classdef KinematicsSym
             B = [cos(psi)*sin(theta) -sin(psi) 0;
                  sin(psi)*sin(theta)  cos(psi) 0;
                  cos(theta)           0        1];
+        end
+        function eul = calculateEulerAngles(R, seq)
+            import casadi.*
+            
+            nextAxis = [2, 3, 1, 2];
+            %      frame), movingFrame = 0.
+            seqSettings.ZYX = [1, 0, 0, 1];
+            seqSettings.ZYZ = [3, 1, 1, 1];
+            seqSettings.XYZ = [3, 0, 1, 1];
+            
+            % Retrieve the settings for a particular axis sequence
+            setting = seqSettings.(seq);
+            firstAxis = setting(1);
+            repetition = setting(2);
+            parity = setting(3);
+            movingFrame = setting(4);
+            
+            % Calculate indices for accessing rotation matrix
+            i = firstAxis;
+            j = nextAxis(i+parity);
+            k = nextAxis(i-parity+1);
+            
+            if repetition
+                % Find special cases of rotation matrix values that correspond to Euler
+                % angle singularities.
+                sy = sqrt(R(i,j).*R(i,j) + R(i,k).*R(i,k));    
+                % Calculate Euler angles
+                eul = [atan2(R(i,j), R(i,k)), atan2(sy, R(i,i)), atan2(R(j,i), -R(k,i))];
+            else
+                % Find special cases of rotation matrix values that correspond to Euler
+                % angle singularities.  
+                sy = sqrt(R(i,i).*R(i,i) + R(j,i).*R(j,i));    
+                % Calculate Euler angles
+                eul = [atan2(R(k,j), R(k,k)), atan2(-R(k,i), sy), atan2(R(j,i), R(i,i))];
+                % Singular matrices need special treatment
+            end
+            if parity
+                % Invert the result
+                eul = -eul;
+            end
+            if movingFrame
+                % Swap the X and Z columns
+                eul(:,[1,3])=eul(:,[3,1]);
+            end
         end
     end
 end
